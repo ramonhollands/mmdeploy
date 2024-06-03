@@ -21,7 +21,7 @@ def rtmdet_head__predict_by_feat(self,
                                  batch_img_metas: Optional[List[dict]] = None,
                                  cfg: Optional[ConfigDict] = None,
                                  rescale: bool = False,
-                                 with_nms: bool = True) -> List[InstanceData]:
+                                 with_nms: bool = False) -> List[InstanceData]:
     """Rewrite `predict_by_feat` of `RTMDet` for default backend.
 
     Rewrite this function to deploy model, transform network output for a
@@ -66,6 +66,9 @@ def rtmdet_head__predict_by_feat(self,
     featmap_sizes = [cls_score.shape[2:] for cls_score in cls_scores]
     mlvl_priors = self.prior_generator.grid_priors(
         featmap_sizes, device=device)
+    
+    img_height = int(batch_img_metas[0]['img_shape'][0])
+    img_width = int(batch_img_metas[0]['img_shape'][1])
 
     flatten_cls_scores = [
         cls_score.permute(0, 2, 3, 1).reshape(batch_size, -1,
@@ -79,10 +82,10 @@ def rtmdet_head__predict_by_feat(self,
     flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1).sigmoid()
     flatten_bbox_preds = torch.cat(flatten_bbox_preds, dim=1)
     priors = torch.cat(mlvl_priors)
-    tl_x = (priors[..., 0] - flatten_bbox_preds[..., 0])
-    tl_y = (priors[..., 1] - flatten_bbox_preds[..., 1])
-    br_x = (priors[..., 0] + flatten_bbox_preds[..., 2])
-    br_y = (priors[..., 1] + flatten_bbox_preds[..., 3])
+    tl_x = (priors[..., 0] - flatten_bbox_preds[..., 0]) / img_width
+    tl_y = (priors[..., 1] - flatten_bbox_preds[..., 1]) / img_height
+    br_x = (priors[..., 0] + flatten_bbox_preds[..., 2]) / img_width
+    br_y = (priors[..., 1] + flatten_bbox_preds[..., 3]) / img_height
     bboxes = torch.stack([tl_x, tl_y, br_x, br_y], -1)
     scores = flatten_cls_scores
     if not with_nms:
