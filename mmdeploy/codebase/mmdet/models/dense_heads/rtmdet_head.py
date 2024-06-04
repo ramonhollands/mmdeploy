@@ -81,11 +81,11 @@ def rtmdet_head__predict_by_feat(self,
     ]
     flatten_cls_scores = torch.cat(flatten_cls_scores, dim=1).sigmoid()
     flatten_bbox_preds = torch.cat(flatten_bbox_preds, dim=1)
-    priors = torch.cat(mlvl_priors)
-    tl_x = (priors[..., 0] - flatten_bbox_preds[..., 0]) / img_width
-    tl_y = (priors[..., 1] - flatten_bbox_preds[..., 1]) / img_height
-    br_x = (priors[..., 0] + flatten_bbox_preds[..., 2]) / img_width
-    br_y = (priors[..., 1] + flatten_bbox_preds[..., 3]) / img_height
+    flatten_priors = torch.cat(mlvl_priors, dim=1)
+    tl_x = (flatten_priors[:, :, 0:1] - flatten_bbox_preds[..., 0]) / img_width
+    tl_y = (flatten_priors[:, :, 1:2] - flatten_bbox_preds[..., 1]) / img_height
+    br_x = (flatten_priors[:, :, 0:1] + flatten_bbox_preds[..., 2]) / img_width
+    br_y = (flatten_priors[:, :, 1:2] + flatten_bbox_preds[..., 3]) / img_height
     bboxes = torch.stack([tl_x, tl_y, br_x, br_y], -1)
     scores = flatten_cls_scores
     if not with_nms:
